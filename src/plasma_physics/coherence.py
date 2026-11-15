@@ -34,8 +34,9 @@ def segment_spectra(
 
     The E field (2500 Hz) is low-pass filtered (zero phase) below the density Nyquist
     (~76 Hz) and interpolated onto the density timestamps. With `sign_correct`, each E
-    segment is multiplied by the polarity of the preceding spike: the probe pair flips
-    orientation every half spin, which would otherwise cancel the cross-spectrum.
+    segment is multiplied by the polarity of the preceding spike. The spikes alternate in sign,
+    which suggests the sensor flips orientation every half spin; without the flip the
+    cross-spectrum cancels. The instrument geometry is inferred from the signal.
     """
     sos = butter(6, lowpass_hz, fs=efield.fs, output="sos")
     e_smooth = sosfiltfilt(sos, efield.x - np.median(efield.x))
