@@ -60,3 +60,29 @@ Main period (500 to 815 s, where the density spectrum is not flat): E minus dens
 | 785 to 820 | 0.098 | 0.051 | 0.0005 * |
 | 821 to 849 | 0.038 | 0.056 | 0.3133 |
 | 849 to 877 | 0.029 | 0.052 | 0.6327 |
+
+## 5. Exploratory: coherence and signal strength
+
+The significant blocks sit where the rocket appears to be inside the aurora. Per block:
+
+- Coherence vs E-field power in 10-40 Hz: Spearman rho = 0.78, p = 0.001.
+- Coherence vs density signal-to-noise (power 10-40 Hz / 60-75 Hz): rho = 0.58, p = 0.030.
+
+| Block (s) | Coherence | Density signal-to-noise | E-field power (counts², rel.) |
+|---|---|---|---|
+| 269 to 317 | 0.016 | 1.0 | 6 |
+| 317 to 372 | 0.039 | 1.0 | 10 |
+| 372 to 399 | 0.029 | 1.0 | 1 |
+| 399 to 427 | 0.040 | 1.0 | 4 |
+| 427 to 457 | 0.098 | 1.3 | 98 |
+| 462 to 490 | 0.009 | 1.0 | 60 |
+| 491 to 537 | 0.082 | 1.3 | 798 |
+| 538 to 581 | 0.056 | 5.1 | 293 |
+| 581 to 647 | 0.062 | 5.4 | 161 |
+| 647 to 756 | 0.122 | 4.3 | 1064 |
+| 756 to 784 | 0.098 | 11.2 | 1063 |
+| 785 to 820 | 0.098 | 8.9 | 404 |
+| 821 to 849 | 0.038 | 4.5 | 89 |
+| 849 to 877 | 0.029 | 1.1 | 53 |
+
+Two readings fit this pattern: the coupling is physically stronger inside the aurora, or it is only detectable when both signals are strong (a density signal-to-noise near 1 means the density is pure noise in that band). These data cannot separate them; a cleaner density trace or an independent auroral marker (particle data) could. With 14 blocks and no pre-registered hypothesis, treat this as exploratory.
