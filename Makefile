@@ -1,4 +1,4 @@
-.PHONY: setup data test lint reproduce all clean
+.PHONY: setup data test lint reproduce note all clean
 
 setup:  ## create .venv with Python 3.12 and install dependencies
 	uv sync
@@ -16,7 +16,10 @@ test:
 reproduce:  ## write reports/results.md and reports/figures/
 	uv run python -m plasma_physics.report
 
-all: setup data lint test reproduce
+note:  ## build docs/technical-note.pdf from docs/technical-note/note.typ
+	uv run python -c "import typst; typst.compile('docs/technical-note/note.typ', output='docs/technical-note.pdf', root='.')"
+
+all: setup data lint test reproduce note
 
 clean:
 	rm -rf .venv .pytest_cache .ruff_cache
