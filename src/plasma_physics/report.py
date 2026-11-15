@@ -1,8 +1,12 @@
-"""Run every analysis and write reports/results.md and reports/figures/*.png.
+"""Run every analysis and write reports/results.md, reports/results.json and figures.
+
+results.json holds the key numbers so the technical note (docs/technical-note/) can read
+them instead of copying them by hand.
 
 Usage: uv run python -m plasma_physics.report
 """
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -135,12 +139,14 @@ def main() -> None:
         "| Fit band (Hz) | E minus density (mean ± s.e.) |",
         "|---|---|",
     ]
+    band_means = []
     for band in [(5.0, 20.0), FIT_BAND_HZ, (10.0, 60.0), (20.0, 60.0)]:
         d = []
         for t0, t1 in sel[:, 2:4]:
             s_n, s_e = pair_slopes(density, efield, [(t0, 0), (t1 - SUB, 0)], band)
             d.append(s_e - s_n)
         m, se = mean_se(np.array(d))
+        band_means.append(m)
         lines.append(f"| {band[0]:.0f} to {band[1]:.0f} | {m:.2f} ± {se:.2f} |")
     lines.append("")
 
@@ -262,6 +268,36 @@ def main() -> None:
         "",
     ]
     (REPORTS / "results.md").write_text("\n".join(lines))
+
+    sig_blocks = [(a, b) for a, b, _, _, p in blocks if p < alpha_bonf]
+    key_numbers = {
+        "reproduced": len(diffs),
+        "reproduction_max_diff": float(np.abs(diffs).max()),
+        "manual_windows": len(sel),
+        "manual_diff_mean": m_sel,
+        "manual_diff_se": se_sel,
+        "band_diff_min": float(min(band_means)),
+        "band_diff_max": float(max(band_means)),
+        "spikes": len(spikes.start),
+        "spike_spacing": float(np.median(np.diff(spikes.start))),
+        "segments": len(spec.t),
+        "auto_diff_mean": float(d_auto.mean()),
+        "auto_diff_ci": [lo, hi],
+        "coh_raw": c_raw,
+        "coh_corrected": c_all,
+        "coh_null_mean": float(null_all.mean()),
+        "coh_p": p_all,
+        "n_perm": N_PERM,
+        "n_blocks": n_blocks,
+        "n_sig_blocks": n_sig,
+        "sig_span": [float(sig_blocks[0][0]), float(sig_blocks[-1][1])] if sig_blocks else None,
+        "max_block_coh": float(coh.max()),
+        "rho_e": float(rho_e),
+        "p_e": float(p_e),
+        "rho_n": float(rho_n),
+        "p_n": float(p_n),
+    }
+    (REPORTS / "results.json").write_text(json.dumps(key_numbers, indent=2) + "\n")
 
     # Figures ------------------------------------------------------------------------------
     plot_coherence(blocks, alpha_bonf, fig_dir / "coherence_blocks.png")
