@@ -12,7 +12,9 @@ format longG
 
 % Loading data with points for the interpolated frequency
 
-load IF_TRICE2H
+% Data lives in ../data/processed, resolved from this script's location
+data_dir = fullfile(fileparts(mfilename('fullpath')), '..', 'data', 'processed');
+load(fullfile(data_dir, 'IF_TRICE2H.txt'));
 
 %% Calculating frequency [0kHz - 2500kHz]
 

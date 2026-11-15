@@ -7,8 +7,9 @@ clear; close all; clc;
 
 %% loading data and performing necessary manipulations
 
-load EF_RawData.mat;
-load charge_profile.mat;
+data_dir = fullfile(fileparts(mfilename('fullpath')), '..', 'data', 'processed');
+load(fullfile(data_dir, 'EF_RawData.mat'));
+load(fullfile(data_dir, 'charge_profile.mat'));
 
 %% calculating desired variables
 

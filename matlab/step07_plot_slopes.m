@@ -7,9 +7,10 @@ clear; close all; clc;
 
 %% loading necessary files and variables
 
-load slopes.txt;
-load charge_profile.mat;
-load my_slopes.mat;
+data_dir = fullfile(fileparts(mfilename('fullpath')), '..', 'data', 'processed');
+load(fullfile(data_dir, 'slopes.txt'));
+load(fullfile(data_dir, 'charge_profile.mat'));
+load(fullfile(data_dir, 'my_slopes.mat'));
 density_time = chargeProfile(:, 1);
 
 m = 0:8192;
