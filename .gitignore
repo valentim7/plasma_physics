@@ -1,0 +1,19 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# MATLAB autosave and generated outputs
+*.asv
+matlab/output/
+
+# Raw data (HF graydata) is never versioned; only data/processed/ is
+data/raw/
+
+# Local and private files
+.env
+.DS_Store
+CLAUDE.local.md

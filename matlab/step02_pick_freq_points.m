@@ -1,4 +1,4 @@
-i%% Plotting HF Data and highlighting features
+%% Plotting HF Data and highlighting features
 % Chrystal Moser Dartmouth College
 % Created: July 7 2020
 % Updated: Nov 25 2020

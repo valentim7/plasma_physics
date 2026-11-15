@@ -7,8 +7,9 @@ clear; close all; clc;
 
 %% loading data and performing necessary manipulations
 
-load EF_RawData.mat;
-load charge_profile.mat;
+data_dir = fullfile(fileparts(mfilename('fullpath')), '..', 'data', 'processed');
+load(fullfile(data_dir, 'EF_RawData.mat'));
+load(fullfile(data_dir, 'charge_profile.mat'));
 
 %% calculating desired variables
 
@@ -151,8 +152,8 @@ for l = 1:length(timestamp_ranges)
     mag_sq = abs(fourier).^2;                         % magnitude squared of dft
     f = (0:n-1) * sf/n;
     
-    log_f = log10(f(2:cast(n, 'int8')));              % log format of "f"
-    log_mag = log10(mag_sq(2:cast(n, 'int8')));       % log format of the magnitude
+    log_f = log10(f(2:floor(n/2)));               % log format of "f" (up to Nyquist)
+    log_mag = log10(mag_sq(2:floor(n/2)));        % log format of the magnitude
     
     figure(l);
     
@@ -193,8 +194,8 @@ for l = 1:length(timestamp_ranges)
 
     hold off
     
-    efieldlog_f = log10(f_efield(2:cast(end/2, 'int8')));
-    efieldlog_mag = log10(average_magef(2:cast(end/2, 'int8'), l));
+    efieldlog_f = log10(f_efield(2:floor(end/2)));
+    efieldlog_mag = log10(average_magef(2:floor(end/2), l));
     
     % efield
 
