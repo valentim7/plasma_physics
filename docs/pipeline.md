@@ -70,6 +70,8 @@ Once you have the .txt files, make sure to add them to a specific folder. We nee
 # General comments on the process of getting the plasma frequency and generating the density profile
 ## 2. Spectrograms_PF
 
+> **Dependency:** this script (and only this one) calls `intersections()`, a third-party function by Douglas Schwarz from the MATLAB File Exchange ("Fast and Robust Curve Intersections"). It is not included in this repository; download it and put `intersections.m` on your MATLAB path before running step 3.
+
 The basic idea of this program is to go through every timestamp for a given time range and obtain the value of the plasma frequency. The time range is a portion of the big graydata you used in Saving_specific_intervals_of_HF_and_VLF_data.m, as illustrated below:
 
 <p align = "center">
