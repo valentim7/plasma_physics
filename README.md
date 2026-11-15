@@ -91,7 +91,7 @@ The original MATLAB scripts are in [`matlab/`](matlab/), numbered in pipeline or
 
 **Limitations**
 - The HF spectra (about 50M points) are not in this repository, so the plasma-frequency trace, and therefore the density, cannot be rebuilt here.
-- The density trace was corrected by hand point by point; its noise floor hides the 10-40 Hz band before about 500 s.
+- The density trace was corrected by hand point by point; its noise floor hides the 10-40 Hz band before about 500 s. Consecutive samples of the trace differ by 2 to 4 kHz (median) although the frequency bin is 0.3 kHz, so the trace jitters by many bins.
 - The electric field is a single channel in what look like raw instrument counts (the original files only call it "EF", once "EF EAST"). The instrument geometry (spin, number of probe pairs, calibration, frequency response) is inferred from the signal, not documented here, and needs to be confirmed. With a single channel the field cannot be despun.
 - The spike detector is conservative: it also flags some small jumps that are not spikes. That only discards segments (445 kept out of about 850 possible); it never lets a spike in.
 - Blocks are defined by segment count (30), so their duration varies (28 to 109 s). The block analysis was not planned before looking at the data.
@@ -100,7 +100,7 @@ The original MATLAB scripts are in [`matlab/`](matlab/), numbered in pipeline or
 - Two MATLAB headers (`step06`, `step07`) say "TRICE2-LOW"; to the best of my knowledge the data is from TRICE-2 High, as the original manual states. To be confirmed with Prof. LaBelle.
 
 **Next steps**
-1. Rebuild the plasma-frequency trace automatically from the HF spectra (change-point score plus Viterbi tracking, outlined in [`plasma_freq.py`](src/plasma_physics/plasma_freq.py)), and validate it against the hand-corrected trace.
+1. Rebuild the plasma-frequency trace automatically from the HF spectra. The plan, with its risks, is in [`plasma_freq.py`](src/plasma_physics/plasma_freq.py): a simple outlier filter as the baseline to beat, then a change-point score per spectrum with Viterbi tracking whose jump penalty is flat for small moves (so it does not smooth away the fluctuations we want to measure), and "no detection" where no cutoff is visible. Success is a lower density noise floor at 10-40 Hz and correct recovery of fluctuations injected into synthetic spectra; agreement with the hand-corrected trace only catches gross errors. The plan was written without access to the spectra and will need revision once they are inspected.
 2. Confirm the instrument geometry and, if a second E-field channel exists, despin the field and apply the instrument response.
 3. Repeat the analysis on the other flights of the campaign.
 
@@ -110,4 +110,4 @@ The original MATLAB scripts are in [`matlab/`](matlab/), numbered in pipeline or
 - Chrystal Moser (Dartmouth) wrote `matlab/step01` and `step02` and made the CAPER-2 spectrogram in `docs/`.
 - `docs/lab-notes.pdf` holds Prof. LaBelle's handwritten notes from 2022 on which windows to keep.
 
-License: MIT. If you use this code or data, see [`CITATION.cff`](CITATION.cff).
+License: MIT for the code. The data in `data/processed/` comes from Prof. LaBelle's group at Dartmouth (NASA TRICE-2 mission) and is published here with his permission; please contact the group before reusing it in a publication. To cite this repository, see [`CITATION.cff`](CITATION.cff).
