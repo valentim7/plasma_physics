@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this code or data, please cite it as below."
+title: "Plasma frequency, electron density and electric-field spectra in the dayside aurora (TRICE-2 High)"
+authors:
+  - family-names: Valentim
+    given-names: Renato
+    affiliation: "Dartmouth College"
+repository-code: "https://github.com/valentim7/plasma_physics"
+license: MIT
+date-released: 2022-04-10
