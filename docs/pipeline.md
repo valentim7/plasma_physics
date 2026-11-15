@@ -1,19 +1,35 @@
-# Research Proposal
+# Pipeline manual (original, 2021-2022)
+
+This is the step-by-step manual written in 2022 for students continuing the research.
+The text is kept as written; only image links and the Figure 1 caption were updated.
+Script names in the text refer to the original files, which now live in `../matlab/`:
+
+| Original name | Current file |
+|---|---|
+| Saving_specific_intervals_of_HF_and_VLF_data.m | [step01_save_hf_interval.m](../matlab/step01_save_hf_interval.m) |
+| Getting_freq_points_off_spectrograms.m | [step02_pick_freq_points.m](../matlab/step02_pick_freq_points.m) |
+| Spectrograms_PF.m | [step03_auto_plasma_frequency.m](../matlab/step03_auto_plasma_frequency.m) |
+| Correcting_PF.m | [step04_correct_plasma_frequency.m](../matlab/step04_correct_plasma_frequency.m) |
+| Spectrograms.m | [step05_check_spectrogram.m](../matlab/step05_check_spectrogram.m) |
+| fourier_series.m | [step06_spectral_slopes.m](../matlab/step06_spectral_slopes.m) |
+| plotting_slopes.m | [step07_plot_slopes.m](../matlab/step07_plot_slopes.m) |
+
+## Overview
 
 Professor LaBelle and his group has launched a rocket in 2019 into the daytime aurora borealis. With the assistance of a wave receiver, variations in the electric field at a range of low and high frequencies were detected. Through the set of power and frequency data obtained, spectrograms could be created, as portrayed by the one below:
 
 <p align = "center">
-<img width="600" alt="image" src="https://user-images.githubusercontent.com/101138915/157105418-1a9935df-3d3e-4964-8e3d-d64a567d989a.png">
+<img width="600" alt="image" src="figures/fig01-caper2-spectrogram.png">
 </p>
 <p align = "center">
-Figure 1 - Spectrogram for the CAPER-2 flight
+Figure 1 - Spectrogram from the CAPER-2 flight (illustrative; courtesy of Prof. LaBelle's group). The analysis below uses TRICE-2 High data.
 </p>
 
 We see here that there is a cutoff delimited by the spectrum of the waves. These cutoffs denote the plasma frequency, which is the fundamental resonant frequency in a charged particle gas. This is important because once the plasma frequency can be attained, the density as a function of time of the charged particles can be also calculated. For example, it was detected through those spectrograms that strong waves are present even at very low frequencies. Those waves are electric field waves, and theory suggests that they are directly intertwined with charge density variations, something known as the Boltzmann relation. Therefore, with the density and the electric field variations at hand, we can test this theoretical relationship.
 As such, the entire process begins with finding the largest downward transition in a plot (power vs frequency) for a specific timestamp. As illustrated in the figure below:
 
 <p align = "center">
-<img width = "500" alt="image" src="https://user-images.githubusercontent.com/101138915/157120700-75b638a8-e11e-4710-b120-9e4a48eb336a.jpeg">
+<img width = "500" alt="image" src="figures/fig02-spectrum-plasma-frequency.jpg">
 </p>
 <p align = "center">
 Figure 2 -  Spectra with plasma frequency
@@ -57,7 +73,7 @@ Once you have the .txt files, make sure to add them to a specific folder. We nee
 The basic idea of this program is to go through every timestamp for a given time range and obtain the value of the plasma frequency. The time range is a portion of the big graydata you used in Saving_specific_intervals_of_HF_and_VLF_data.m, as illustrated below:
 
 <p align = "center">
-<img width = "500" alt="image" src="https://user-images.githubusercontent.com/101138915/157133621-bc772fbb-c980-4fb8-8738-d923de3b1fd6.jpeg">
+<img width = "500" alt="image" src="figures/fig03-flight-time-ranges.jpg">
 </p>
 
 <p align = "center">
@@ -67,7 +83,7 @@ Figure 3 - Time ranges of the flight
 The program first calculates the interpolated frequency:
 
 <p align = "center">
-<img width = "300" alt="image" src= "https://user-images.githubusercontent.com/101138915/157134048-5c89e49a-7217-42c1-b16e-4707a4848f13.jpg">
+<img width = "300" alt="image" src= "figures/eq-interpolated-frequency.jpg">
 </p>
 
 Where t denotes a time in the range selected, t1 is the first timestamp after t and t2 is the first timestamp before t. Consequently, f1 and f2 are the corresponding frequencies for t1 and t2. In any case, once we have f, we set two boundaries:
@@ -78,7 +94,7 @@ b)	We take the average of the points that are below the interpolated frequency a
 From that, we calculate the average of the two lines, which is denoted by the yellow line in figure 1. Preferably, we do not want this line to be in the middle of the two horizontal lines. This will depend on the shape of our spectra for a given time range. The interpolated frequency is the first intersection of the yellow line from right to left; sometimes, moving this yellow line up a little bit will make us reach more correct intersection points, but occasionally, it could be the other way around. Therefore, we make those changes by altering the default value of 0.997 in the section “Third Horizontal Line.” The table below provides a better depiction for the effect of changing the default value to another, closer decimal number. 
 
 <p align = "center">
-<img width = "500" alt="image" src = "https://user-images.githubusercontent.com/101138915/157134656-0350bd04-8c4c-4dde-9aa6-95905730cdf4.jpg">
+<img width = "500" alt="image" src = "figures/table-threshold-factor.jpg">
 </p>
 
 From here, the first data for the plasma frequency is obtained and it is plotted in purple along with the spectrogram for the specified time range. This is the first “sketch” of the plasma frequency since the program does not always recognize the correct downward transition. You can sometimes get some spikes or minima that do not follow the trend of the cutoffs. For those cases, there is no choice except to manually correct them. The correcting_PF.m does that for us. However, before running this program, we must keep track of all intervals that need correction.
@@ -87,7 +103,7 @@ c)	Zoom in the desired area—the more you zoom in the more specific the x-axis 
 d)	Annotate all the time ranges that need correction into a separate document or paper. Here is an example of this process:
 
 <p align = "center">
-<img width = "500" img height = "500" alt="image" src = "https://user-images.githubusercontent.com/101138915/157134406-6969985d-3834-427a-8078-73d4a3b3cb53.jpeg">
+<img width = "500" img height = "500" alt="image" src = "figures/fig04-correction-intervals.jpg">
 </p>
 <p align = "center">	
 Figure 4 - Process for the detecting points that need correction
@@ -109,7 +125,7 @@ The code follows the same logic from Spectrograms_PF, but this time, instead of 
 Here is an example of how the program looks like for the interval we just annotated [628.2 628.55]:
 
 <p align = "center">
-<img width = "500" alt="image" src = "https://user-images.githubusercontent.com/101138915/157134831-f63c8ffa-c460-48a2-b8d2-15cea2fe94fa.jpeg">
+<img width = "500" alt="image" src = "figures/fig05-manual-correction.jpg">
 </p>
 <p align = "center">
 Figure 5 - Selecting correct candidates for the plasma frequency
@@ -118,7 +134,7 @@ Figure 5 - Selecting correct candidates for the plasma frequency
 The program will give you a .txt file containing a table with the plasma frequencies and their corresponding timestamps and charge densities, which are calculated through the following relation:
 
 <p align = "center">
-<img width = "150" alt="image" src = "https://user-images.githubusercontent.com/101138915/157136080-628af89e-42f3-4ea8-ba3f-f54b38174a54.jpg">
+<img width = "150" alt="image" src = "figures/eq-electron-density.jpg">
 </p>
 
 Where fpe represents the plasma frequency at a given point.
@@ -143,7 +159,7 @@ With the data for the density and electric field at hand, we can now calculate t
 
 a. Select a time range that you want to look at, always try for an interval equal or greater than 40 seconds. After selecting this interval, a graph of the electric field vs time will appear.
 <p align = "center">
-<img width="500" alt="image" src="https://user-images.githubusercontent.com/101138915/160319608-9a0ce12e-a4fa-4c32-a7e6-15ca0758b165.png">
+<img width="500" alt="image" src="figures/fig06-electric-field-vs-time.png">
 </p>
 <p align = "center">
 Figure 6 - Electric field as a function of time
@@ -157,7 +173,7 @@ If you input the correct starting point, you will be able to see the fifteen gra
 
 Here is an example for the starting point 615.97:
 <p align = "center">
-<img width="500" alt="image" src="https://user-images.githubusercontent.com/101138915/160320263-627e1619-b20c-40ba-8902-14a48951b10b.png">
+<img width="500" alt="image" src="figures/fig07-slopes-no-sun-spike.png">
 </p>
 <p align = "center">
 Figure 7 - Slopes without the presence of a sun spike in the electric field
@@ -174,7 +190,7 @@ The program plotting_slopes is simple. You just have to select the interval you 
 Note: the commented lines are for slopes that were considered as possible ones but were not included in the result for the selected files. They provide a good example, however, of how you can extract the correct slopes in the program without the need of loading a file with the slopes already extracted.
 
 <p align = "center">
-<img width="600" alt="image" src="https://user-images.githubusercontent.com/101138915/160320291-3d8296d9-b81c-41ef-80c6-065eef7787ef.png">
+<img width="600" alt="image" src="figures/fig08-density-and-slopes.png">
 </p>
 <p align = "center">
 Figure 8 - Slopes for the density and electric field
