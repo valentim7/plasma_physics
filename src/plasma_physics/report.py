@@ -18,7 +18,15 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 from scipy.stats import spearmanr  # noqa: E402
 
-from plasma_physics.coherence import permutation_test, segment_spectra  # noqa: E402
+from plasma_physics.coherence import (  # noqa: E402
+    CoherencyTest,
+    coherency_test,
+    effective_segments,
+    permutation_test,
+    phase_randomization_test,
+    segment_coherency,
+    segment_spectra,
+)
 from plasma_physics.io import (  # noqa: E402
     TimeSeries,
     load_density,
@@ -50,6 +58,18 @@ class Window:
     t1: float
     slope_n: float
     slope_e: float
+
+
+@dataclass
+class Block:
+    t0: float
+    t1: float
+    test: CoherencyTest
+
+    @property
+    def z(self) -> float:
+        """Quadrature part in units of its spread under shuffled pairings."""
+        return self.test.mean.imag / self.test.null_sd_imag
 
 
 def mean_se(x: np.ndarray) -> tuple[float, float]:
@@ -195,40 +215,81 @@ def main() -> None:
         "",
     ]
 
-    # 4. Coherence -------------------------------------------------------------------------
+    # 4. Coupling between density and E field ----------------------------------------------
     spec = segment_spectra(density, efield, segs)
     band = (spec.f >= FIT_BAND_HZ[0]) & (spec.f <= FIT_BAND_HZ[1])
     raw = segment_spectra(density, efield, segs, sign_correct=False)
-    c_raw, p_raw, _ = permutation_test(raw.X, raw.Y, band, N_PERM, rng)
-    c_all, p_all, null_all = permutation_test(spec.X, spec.Y, band, N_PERM, rng)
+    c_all, p_shuffle, _ = permutation_test(spec.X, spec.Y, band, N_PERM, rng)
+    _, p_phase, null_phase = phase_randomization_test(spec.X, spec.Y, band, N_PERM, rng)
+    n_eff = effective_segments(spec.X, spec.Y, band)
+
     n_blocks = len(spec.t) // BLOCK_SEGMENTS
     alpha_bonf = 0.05 / n_blocks
-    blocks = []
+    blocks: list[Block] = []
     for k in range(n_blocks):
         s = slice(k * BLOCK_SEGMENTS, (k + 1) * BLOCK_SEGMENTS)
-        c, p, null = permutation_test(spec.X[s], spec.Y[s], band, N_PERM, rng)
-        blocks.append((spec.t[s][0], spec.t[s][-1] + SUB, c, float(np.quantile(null, 0.95)), p))
-    n_sig = sum(p < alpha_bonf for *_, p in blocks)
+        blocks.append(
+            Block(
+                t0=float(spec.t[s][0]),
+                t1=float(spec.t[s][-1] + SUB),
+                test=coherency_test(spec.X[s], spec.Y[s], band, N_PERM, rng),
+            )
+        )
+    sig = [b for b in blocks if b.test.p_imag < alpha_bonf]
+    sig_real = [b for b in blocks if b.test.p_real < alpha_bonf]
+
+    # Check of the sign correction: inside the significant blocks, uncorrected segments
+    # should show opposite quadrature for the two spike polarities.
+    c_raw = segment_coherency(raw.X, raw.Y, band)
+    flip = np.sign((segment_coherency(spec.X, spec.Y, band) * np.conj(c_raw)).real)
+    in_sig = np.zeros(len(spec.t), dtype=bool)
+    for b in sig:
+        in_sig |= (spec.t >= b.t0) & (spec.t < b.t1)
+    sign_of_block = np.zeros(len(spec.t))
+    for b in sig:
+        sign_of_block[(spec.t >= b.t0) & (spec.t < b.t1)] = np.sign(b.test.mean.imag)
+    aligned = c_raw.imag * sign_of_block  # so blocks of opposite sign do not cancel
+    pol_plus = float(aligned[in_sig & (flip > 0)].mean())
+    pol_minus = float(aligned[in_sig & (flip < 0)].mean())
+
     lines += [
-        "## 4. Coherence between density and E field (10-40 Hz)",
+        "## 4. Coupling between density and E field (10-40 Hz)",
         "",
-        f"- Segments: {len(spec.t)}; permutations: {N_PERM}.",
-        f"- Without sign correction: coherence {c_raw:.4f}, p = {p_raw:.3f}.",
-        f"- With sign correction: coherence {c_all:.4f} "
-        f"(null mean {null_all.mean():.4f}), p = {p_all:.4f}.",
-        f"- Blocks of {BLOCK_SEGMENTS} segments: {n_sig} of {n_blocks} significant after "
-        f"Bonferroni (p < {alpha_bonf:.4f}).",
+        "### 4.1 Power-weighted coherence, whole flight",
         "",
-        "| Block (s) | Coherence | Null 95th pct. | p-value |",
-        "|---|---|---|---|",
+        f"- Segments: {len(spec.t)}; permutations: {N_PERM}; coherence {c_all:.4f}.",
+        f"- Null that shuffles segment pairings: p = {p_shuffle:.4f}. This null is too lenient "
+        "here, because the power of both signals rises together inside the aurora.",
+        f"- Null that keeps the pairing and randomizes one phase per segment: p = {p_phase:.3f} "
+        f"(null mean {null_phase.mean():.4f}).",
+        f"- The estimate is carried by few segments: effective number {n_eff:.0f} "
+        f"of {len(spec.t)}.",
+        "",
+        "### 4.2 Equal-weight coherency per block",
+        "",
+        "Each segment's cross-spectrum is divided by its own power, so every segment weighs "
+        "the same. Real part: in-phase coupling. Imaginary part: quadrature (90 degrees). "
+        "With this sign convention, E proportional to +d(density)/dt gives a negative "
+        "imaginary part. p-values are two-sided, from shuffled pairings within the block.",
+        "",
+        f"- Blocks of {BLOCK_SEGMENTS} segments: {len(sig)} of {n_blocks} have significant "
+        f"quadrature after Bonferroni (p < {alpha_bonf:.4f}); {len(sig_real)} have a "
+        "significant in-phase part.",
+        f"- Sign-correction check inside the significant blocks: without the correction, "
+        f"segments after a positive spike give {pol_plus:+.2f} and segments after a negative "
+        f"spike give {pol_minus:+.2f} (quadrature, sign-aligned per block).",
+        "",
+        "| Block (s) | In phase | Quadrature | z (quadrature) | p (quadrature) |",
+        "|---|---|---|---|---|",
     ]
     lines += [
-        f"| {a:.0f} to {b:.0f} | {c:.3f} | {q:.3f} | {p:.4f}{' *' if p < alpha_bonf else ''} |"
-        for a, b, c, q, p in blocks
+        f"| {b.t0:.0f} to {b.t1:.0f} | {b.test.mean.real:+.3f} | {b.test.mean.imag:+.3f} | "
+        f"{b.z:+.1f} | {b.test.p_imag:.4f}{' *' if b.test.p_imag < alpha_bonf else ''} |"
+        for b in blocks
     ]
     lines.append("")
 
-    # 5. Exploratory: does coherence follow signal strength? ------------------------------
+    # 5. Exploratory: does the coupling follow signal strength? ---------------------------
     # Density power at 60-75 Hz is used as its noise floor (the spectrum is flat there).
     floor = (spec.f >= 60) & (spec.f <= 75)
     strength = []
@@ -238,38 +299,39 @@ def main() -> None:
         pe = (np.abs(spec.Y[s]) ** 2).mean(axis=0)
         strength.append((pn[band].mean() / pn[floor].mean(), pe[band].mean()))
     strength = np.array(strength)
-    coh = np.array([c for _, _, c, _, _ in blocks])
-    rho_e, p_e = spearmanr(coh, strength[:, 1])
-    rho_n, p_n = spearmanr(coh, strength[:, 0])
-    lines += [
-        "## 5. Exploratory: coherence and signal strength",
-        "",
-        "The significant blocks sit where the rocket appears to be inside the aurora. Per block:",
-        "",
-        f"- Coherence vs E-field power in 10-40 Hz: Spearman rho = {rho_e:.2f}, p = {p_e:.3f}.",
-        f"- Coherence vs density signal-to-noise (power 10-40 Hz / 60-75 Hz): "
-        f"rho = {rho_n:.2f}, p = {p_n:.3f}.",
-        "",
-        "| Block (s) | Coherence | Density signal-to-noise | E-field power (counts², rel.) |",
-        "|---|---|---|---|",
-    ]
+    quad = np.array([abs(b.test.mean.imag) for b in blocks])
+    rho_e, p_e = spearmanr(quad, strength[:, 1])
+    rho_n, p_n = spearmanr(quad, strength[:, 0])
     e_ref = strength[:, 1].min()
     lines += [
-        f"| {a:.0f} to {b:.0f} | {c:.3f} | {sn_:.1f} | {pe_ / e_ref:.0f} |"
-        for (a, b, c, _, _), (sn_, pe_) in zip(blocks, strength, strict=True)
+        "## 5. Exploratory: coupling and signal strength",
+        "",
+        "Per block, size of the quadrature coupling (absolute value) against signal strength:",
+        "",
+        f"- vs E-field power in 10-40 Hz: Spearman rho = {rho_e:.2f}, p = {p_e:.4f}.",
+        f"- vs density signal-to-noise (power 10-40 Hz / 60-75 Hz): "
+        f"rho = {rho_n:.2f}, p = {p_n:.3f}.",
+        "",
+        "| Block (s) | Quadrature | Density signal-to-noise | E-field power (rel.) |",
+        "|---|---|---|---|",
+    ]
+    lines += [
+        f"| {b.t0:.0f} to {b.t1:.0f} | {b.test.mean.imag:+.3f} | {sn_:.1f} | {pe_ / e_ref:.0f} |"
+        for b, (sn_, pe_) in zip(blocks, strength, strict=True)
     ]
     lines += [
         "",
-        "Two readings fit this pattern: the coupling is physically stronger inside the aurora, "
-        "or it is only detectable when both signals are strong (a density signal-to-noise near "
-        "1 means the density is pure noise in that band). These data cannot separate them; a "
-        "cleaner density trace or an independent auroral marker (particle data) could. "
-        "With 14 blocks and no pre-registered hypothesis, treat this as exploratory.",
+        "Two readings fit this pattern: the coupling is physically stronger where wave activity "
+        "is strong, or it is only detectable when the density is above its noise floor (a "
+        "signal-to-noise near 1 means pure noise in that band). These data cannot separate "
+        "them. With 14 blocks and no hypothesis fixed in advance, treat this as exploratory.",
         "",
     ]
     (REPORTS / "results.md").write_text("\n".join(lines))
 
-    sig_blocks = [(a, b) for a, b, _, _, p in blocks if p < alpha_bonf]
+    strongest = max(blocks, key=lambda b: abs(b.z))
+    pos = [b for b in sig if b.test.mean.imag > 0]
+    neg = [b for b in sig if b.test.mean.imag < 0]
     key_numbers = {
         "reproduced": len(diffs),
         "reproduction_max_diff": float(np.abs(diffs).max()),
@@ -283,15 +345,22 @@ def main() -> None:
         "segments": len(spec.t),
         "auto_diff_mean": float(d_auto.mean()),
         "auto_diff_ci": [lo, hi],
-        "coh_raw": c_raw,
-        "coh_corrected": c_all,
-        "coh_null_mean": float(null_all.mean()),
-        "coh_p": p_all,
+        "coh": c_all,
+        "p_shuffle": p_shuffle,
+        "p_phase": p_phase,
+        "n_eff": n_eff,
         "n_perm": N_PERM,
         "n_blocks": n_blocks,
-        "n_sig_blocks": n_sig,
-        "sig_span": [float(sig_blocks[0][0]), float(sig_blocks[-1][1])] if sig_blocks else None,
-        "max_block_coh": float(coh.max()),
+        "n_sig_blocks": len(sig),
+        "n_sig_real": len(sig_real),
+        "sig_span": [sig[0].t0, sig[-1].t1] if sig else None,
+        "pos_span": [pos[0].t0, pos[-1].t1] if pos else None,
+        "neg_span": [neg[0].t0, neg[-1].t1] if neg else None,
+        "strongest_quad": strongest.test.mean.imag,
+        "strongest_z": strongest.z,
+        "strongest_span": [strongest.t0, strongest.t1],
+        "pol_plus": pol_plus,
+        "pol_minus": pol_minus,
         "rho_e": float(rho_e),
         "p_e": float(p_e),
         "rho_n": float(rho_n),
@@ -300,53 +369,68 @@ def main() -> None:
     (REPORTS / "results.json").write_text(json.dumps(key_numbers, indent=2) + "\n")
 
     # Figures ------------------------------------------------------------------------------
-    plot_coherence(blocks, alpha_bonf, fig_dir / "coherence_blocks.png")
+    plot_quadrature(blocks, alpha_bonf, fig_dir / "quadrature_blocks.png")
     main_starts = segs.start[in_range]
     main_starts = main_starts[(main_starts >= MAIN_PERIOD[0]) & (main_starts < MAIN_PERIOD[1])]
     plot_spectra(density, efield, main_starts, fig_dir / "mean_spectra.png")
     plot_slope_diff(d_auto, (lo, hi), fig_dir / "slope_difference.png")
     plot_spikes(efield, spikes, segs, fig_dir / "efield_spikes.png")
-    plot_strength(blocks, strength[:, 1] / e_ref, alpha_bonf, fig_dir / "coherence_vs_power.png")
+    plot_strength(blocks, strength[:, 1] / e_ref, alpha_bonf, fig_dir / "quadrature_vs_power.png")
     print("\n".join(lines))
 
 
 def plot_strength(blocks, e_power, alpha_bonf, path: Path) -> None:
     fig, ax = new_fig(figsize=(6.5, 3.8))
-    for (_, _, c, _, p), x in zip(blocks, e_power, strict=True):
-        sig = p < alpha_bonf
-        ax.plot(x, c, "o", ms=8, mfc=BLUE if sig else SURFACE, mec=BLUE, mew=2)
+    for b, x in zip(blocks, e_power, strict=True):
+        sig = b.test.p_imag < alpha_bonf
+        ax.plot(x, abs(b.test.mean.imag), "o", ms=8, mfc=BLUE if sig else SURFACE, mec=BLUE, mew=2)
     ax.plot([], [], "o", ms=8, mfc=BLUE, mec=BLUE, label="significant (Bonferroni)")
     ax.plot([], [], "o", ms=8, mfc=SURFACE, mec=BLUE, mew=2, label="not significant")
     ax.set_xscale("log")
+    ax.set_ylim(0, None)
     ax.set_xlabel("E-field power in 10-40 Hz (relative to the quietest block)", color=INK_2)
-    ax.set_ylabel("Coherence, 10-40 Hz", color=INK_2)
-    ax.set_title("Coherence rises with wave activity", loc="left", color=INK, fontsize=11)
+    ax.set_ylabel("Quadrature coupling (absolute)", color=INK_2)
+    ax.set_title(
+        "Coupling is found where wave activity is strong", loc="left", color=INK, fontsize=11
+    )
     ax.legend(frameon=False, fontsize=9, labelcolor=INK_2, loc="upper left")
     fig.tight_layout()
     fig.savefig(path, dpi=150)
     plt.close(fig)
 
 
-def plot_coherence(blocks, alpha_bonf, path: Path) -> None:
-    fig, ax = new_fig(figsize=(9, 3.8))
-    for a, b, c, q, p in blocks:
-        mid = (a + b) / 2
-        ax.fill_between([a, b], 0, q, color=GRID, lw=0)
-        sig = p < alpha_bonf
-        ax.plot(mid, c, "o", ms=8, mfc=BLUE if sig else SURFACE, mec=BLUE, mew=2, zorder=3)
-    ax.plot([], [], "o", ms=8, mfc=BLUE, mec=BLUE, label="significant (Bonferroni)")
-    ax.plot([], [], "o", ms=8, mfc=SURFACE, mec=BLUE, mew=2, label="not significant")
+def plot_quadrature(blocks, alpha_bonf, path: Path) -> None:
+    fig, ax = new_fig(figsize=(9, 4.0))
+    for b in blocks:
+        band95 = 1.96 * b.test.null_sd_imag
+        ax.fill_between([b.t0, b.t1], -band95, band95, color=GRID, lw=0)
+        mid = (b.t0 + b.t1) / 2
+        sig = b.test.p_imag < alpha_bonf
+        ax.plot(mid, b.test.mean.real, "s", ms=6, mfc=SURFACE, mec=ORANGE, mew=2, zorder=3)
+        ax.plot(
+            mid,
+            b.test.mean.imag,
+            "o",
+            ms=9,
+            mfc=BLUE if sig else SURFACE,
+            mec=BLUE,
+            mew=2,
+            zorder=4,
+        )
+    ax.axhline(0, color=MUTED, lw=1)
+    ax.plot([], [], "o", ms=9, mfc=BLUE, mec=BLUE, label="quadrature (90°), significant")
+    ax.plot([], [], "o", ms=9, mfc=SURFACE, mec=BLUE, mew=2, label="quadrature, not significant")
+    ax.plot([], [], "s", ms=6, mfc=SURFACE, mec=ORANGE, mew=2, label="in phase")
     ax.fill_between([], [], color=GRID, label="95% of shuffled pairings")
     ax.set_xlabel("Flight time (s)", color=INK_2)
-    ax.set_ylabel("Coherence, 10-40 Hz", color=INK_2)
-    ax.set_ylim(0, None)
+    ax.set_ylabel("Mean coherency, 10-40 Hz", color=INK_2)
     ax.set_title(
-        "Density and E field are coherent only in some stretches of the flight",
+        "Density and E field couple in quadrature, and the sign flips mid-flight",
         loc="left",
         color=INK,
         fontsize=11,
     )
-    ax.legend(frameon=False, fontsize=9, labelcolor=INK_2, loc="upper left")
+    ax.legend(frameon=False, fontsize=9, labelcolor=INK_2, loc="lower left", ncols=2)
     fig.tight_layout()
     fig.savefig(path, dpi=150)
     plt.close(fig)
