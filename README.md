@@ -12,7 +12,7 @@ Does the electron density in the aurora follow the **Boltzmann relation**, that 
 
 - **The 2022 analysis is reproduced exactly.** The Python port recomputes all 165 MATLAB windows, with a maximum difference of 5e-7 (the rounding of the original text output).
 - **Density and E field are linearly related, but only in some stretches of the flight.** The coherence in the 10-40 Hz band is small but well above chance over the whole flight (permutation test, p = 0.001). In blocks of about 28 s, it is significant in 4 of 14 blocks after a Bonferroni correction, all between about 490 s and 820 s. This puts a number on the 2022 impression that "the relation shows up only in some cases".
-- **The spectral slopes do not show the expected difference.** In the main period (500-815 s) the E-field slope minus the density slope is -0.15, 95% CI [-0.69, 0.36]. A simple model (Boltzmann relation plus structures carried past the rocket unchanged) predicts about +2. The difference also moves from -1.4 to +0.4 depending on the fit band, so slopes alone are a fragile test.
+- **The spectral slopes do not show the difference we expected.** In the main period (500-815 s) the E-field slope minus the density slope is -0.15, 95% CI [-0.69, 0.36]. Our working expectation in 2022 was about +2 (see Limitations for the assumptions behind it). The difference also moves from -1.4 to +0.4 depending on the fit band, so slopes alone are a fragile test.
 - **Before about 500 s, the density data cannot answer the question.** Its spectrum is flat in 10-40 Hz (slope about 0), which means the traced density is at its noise floor there. A better plasma-frequency trace is the main lever to improve the result (see Next steps).
 
 | | 2022 (MATLAB) | 2026 (Python) |
@@ -90,7 +90,8 @@ The original MATLAB scripts are in [`matlab/`](matlab/), numbered in pipeline or
 - The electric field is in raw counts from one probe pair. Without the second pair the signal cannot be despun, and the instrument's frequency response is not applied.
 - The spike detector is conservative: it also flags some small jumps that are not spikes. That only discards segments (445 kept out of about 850 possible); it never lets a spike in.
 - Coherence blocks are defined by segment count (30), so their duration varies (28 to 109 s).
-- The +2 expectation for the slope difference assumes the Boltzmann relation and structures frozen into a flow past the rocket; it is a simplified model, not a fitted prediction.
+- The +2 expected slope difference was a working value from discussions in the group, not taken from the literature. It follows from a simple argument: the Boltzmann relation gives δn/n ∝ δφ, and E = -∇φ gives |E(k)|² ∝ k²|δn(k)|², so if structures drift past the rocket unchanged (frequency ∝ k) the E-field slope is 2 higher (flatter) than the density slope. It assumes constant electron temperature, frozen-in structures, and that the probe measures E along k, which a spinning single probe pair does not guarantee. The correct expectation for this geometry still needs to be checked.
+- Two MATLAB headers (`step06`, `step07`) say "TRICE2-LOW"; to the best of my knowledge the data is from TRICE-2 High, as the original manual states. To be confirmed with Prof. LaBelle.
 
 **Next steps**
 1. Rebuild the plasma-frequency trace automatically from the HF spectra (change-point score plus Viterbi tracking, outlined in [`plasma_freq.py`](src/plasma_physics/plasma_freq.py)), and validate it against the hand-corrected trace.

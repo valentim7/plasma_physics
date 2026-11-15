@@ -307,7 +307,7 @@ def plot_slope_diff(d: np.ndarray, ci: tuple[float, float], path: Path) -> None:
     ax.text(
         2,
         top * 0.80,
-        "  +2 (simple Boltzmann\n  + Taylor expectation)",
+        "  +2 (2022 working\n  expectation)",
         color=INK_2,
         fontsize=9,
         va="top",
