@@ -12,6 +12,7 @@ import matplotlib.ticker
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
+from scipy.stats import spearmanr  # noqa: E402
 
 from plasma_physics.coherence import permutation_test, segment_spectra  # noqa: E402
 from plasma_physics.io import (  # noqa: E402
@@ -220,6 +221,46 @@ def main() -> None:
         for a, b, c, q, p in blocks
     ]
     lines.append("")
+
+    # 5. Exploratory: does coherence follow signal strength? ------------------------------
+    # Density power at 60-75 Hz is used as its noise floor (the spectrum is flat there).
+    floor = (spec.f >= 60) & (spec.f <= 75)
+    strength = []
+    for k in range(n_blocks):
+        s = slice(k * BLOCK_SEGMENTS, (k + 1) * BLOCK_SEGMENTS)
+        pn = (np.abs(spec.X[s]) ** 2).mean(axis=0)
+        pe = (np.abs(spec.Y[s]) ** 2).mean(axis=0)
+        strength.append((pn[band].mean() / pn[floor].mean(), pe[band].mean()))
+    strength = np.array(strength)
+    coh = np.array([c for _, _, c, _, _ in blocks])
+    rho_e, p_e = spearmanr(coh, strength[:, 1])
+    rho_n, p_n = spearmanr(coh, strength[:, 0])
+    lines += [
+        "## 5. Exploratory: coherence and signal strength",
+        "",
+        "The significant blocks sit where the rocket appears to be inside the aurora. Per block:",
+        "",
+        f"- Coherence vs E-field power in 10-40 Hz: Spearman rho = {rho_e:.2f}, p = {p_e:.3f}.",
+        f"- Coherence vs density signal-to-noise (power 10-40 Hz / 60-75 Hz): "
+        f"rho = {rho_n:.2f}, p = {p_n:.3f}.",
+        "",
+        "| Block (s) | Coherence | Density signal-to-noise | E-field power (counts², rel.) |",
+        "|---|---|---|---|",
+    ]
+    e_ref = strength[:, 1].min()
+    lines += [
+        f"| {a:.0f} to {b:.0f} | {c:.3f} | {sn_:.1f} | {pe_ / e_ref:.0f} |"
+        for (a, b, c, _, _), (sn_, pe_) in zip(blocks, strength, strict=True)
+    ]
+    lines += [
+        "",
+        "Two readings fit this pattern: the coupling is physically stronger inside the aurora, "
+        "or it is only detectable when both signals are strong (a density signal-to-noise near "
+        "1 means the density is pure noise in that band). These data cannot separate them; a "
+        "cleaner density trace or an independent auroral marker (particle data) could. "
+        "With 14 blocks and no pre-registered hypothesis, treat this as exploratory.",
+        "",
+    ]
     (REPORTS / "results.md").write_text("\n".join(lines))
 
     # Figures ------------------------------------------------------------------------------
@@ -229,7 +270,25 @@ def main() -> None:
     plot_spectra(density, efield, main_starts, fig_dir / "mean_spectra.png")
     plot_slope_diff(d_auto, (lo, hi), fig_dir / "slope_difference.png")
     plot_spikes(efield, spikes, segs, fig_dir / "efield_spikes.png")
+    plot_strength(blocks, strength[:, 1] / e_ref, alpha_bonf, fig_dir / "coherence_vs_power.png")
     print("\n".join(lines))
+
+
+def plot_strength(blocks, e_power, alpha_bonf, path: Path) -> None:
+    fig, ax = new_fig(figsize=(6.5, 3.8))
+    for (_, _, c, _, p), x in zip(blocks, e_power, strict=True):
+        sig = p < alpha_bonf
+        ax.plot(x, c, "o", ms=8, mfc=BLUE if sig else SURFACE, mec=BLUE, mew=2)
+    ax.plot([], [], "o", ms=8, mfc=BLUE, mec=BLUE, label="significant (Bonferroni)")
+    ax.plot([], [], "o", ms=8, mfc=SURFACE, mec=BLUE, mew=2, label="not significant")
+    ax.set_xscale("log")
+    ax.set_xlabel("E-field power in 10-40 Hz (relative to the quietest block)", color=INK_2)
+    ax.set_ylabel("Coherence, 10-40 Hz", color=INK_2)
+    ax.set_title("Coherence rises with wave activity", loc="left", color=INK, fontsize=11)
+    ax.legend(frameon=False, fontsize=9, labelcolor=INK_2, loc="upper left")
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
 
 
 def plot_coherence(blocks, alpha_bonf, path: Path) -> None:
