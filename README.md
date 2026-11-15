@@ -101,8 +101,7 @@ The original MATLAB scripts are in [`matlab/`](matlab/), numbered in pipeline or
 ## History and credits
 
 - Research supervised by Prof. LaBelle, Dartmouth College, 2021-2022. The repository was created at his request so that future students could continue the work.
-- `matlab/step01` and `step02` were written by Chrystal Moser (Dartmouth).
-- The CAPER-2 spectrogram in `docs/` was made by a PhD student in Prof. LaBelle's group.
-- `docs/lab-notes.pdf` holds my handwritten notes from 2022 on which windows to keep.
+- Chrystal Moser (Dartmouth) wrote `matlab/step01` and `step02` and made the CAPER-2 spectrogram in `docs/`.
+- `docs/lab-notes.pdf` holds Prof. LaBelle's handwritten notes from 2022 on which windows to keep.
 
 License: MIT. If you use this code or data, see [`CITATION.cff`](CITATION.cff).

@@ -22,7 +22,7 @@ Professor LaBelle and his group has launched a rocket in 2019 into the daytime a
 <img width="600" alt="image" src="figures/fig01-caper2-spectrogram.png">
 </p>
 <p align = "center">
-Figure 1 - Spectrogram from the CAPER-2 flight (illustrative; courtesy of Prof. LaBelle's group). The analysis below uses TRICE-2 High data.
+Figure 1 - Spectrogram from the CAPER-2 flight (illustrative; made by Chrystal Moser). The analysis below uses TRICE-2 High data.
 </p>
 
 We see here that there is a cutoff delimited by the spectrum of the waves. These cutoffs denote the plasma frequency, which is the fundamental resonant frequency in a charged particle gas. This is important because once the plasma frequency can be attained, the density as a function of time of the charged particles can be also calculated. For example, it was detected through those spectrograms that strong waves are present even at very low frequencies. Those waves are electric field waves, and theory suggests that they are directly intertwined with charge density variations, something known as the Boltzmann relation. Therefore, with the density and the electric field variations at hand, we can test this theoretical relationship.
