@@ -35,7 +35,7 @@ def load_density(data_dir: Path = DATA_DIR) -> TimeSeries:
 
 
 def load_efield(data_dir: Path = DATA_DIR) -> TimeSeries:
-    """Electric field from one spinning probe pair, in raw (uncalibrated) ADC counts."""
+    """Electric field: one channel, apparently raw instrument counts (geometry undocumented)."""
     raw = sio.loadmat(data_dir / "EF_RawData.mat")["raw_data"]
     return TimeSeries(t=raw[:, 0], x=raw[:, 1])
 

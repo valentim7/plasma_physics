@@ -1,8 +1,9 @@
 """Automatic detection of the "sun spikes" in the E field.
 
-The spikes are short rectangular pulses (~40 ms) that appear every half spin (~0.92 s),
-alternating in sign as the probe pair turns. In 2022 the clean stretches between them were
-found by hand (11 starting points). Here every pulse is found from its sharp edges.
+The spikes are short rectangular pulses (~40 ms) every ~0.92 s, half the period of the large
+~1.84 s oscillation (most likely the rocket spin), alternating in sign. In 2022 the clean
+stretches between them were found by hand (11 starting points). Here every pulse is found from
+its sharp edges.
 """
 
 from dataclasses import dataclass

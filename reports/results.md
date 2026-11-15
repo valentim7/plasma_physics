@@ -37,52 +37,61 @@ Sensitivity of E minus density on the 64 hand-selected windows (detrended spectr
 
 Main period (500 to 815 s, where the density spectrum is not flat): E minus density = -0.15, 95% CI [-0.69, 0.36] (moving-block bootstrap, blocks of 10 windows).
 
-## 4. Coherence between density and E field (10-40 Hz)
+## 4. Coupling between density and E field (10-40 Hz)
 
-- Segments: 445; permutations: 2000.
-- Without sign correction: coherence 0.0040, p = 0.014.
-- With sign correction: coherence 0.0058 (null mean 0.0023), p = 0.0010.
-- Blocks of 30 segments: 4 of 14 significant after Bonferroni (p < 0.0036).
+### 4.1 Power-weighted coherence, whole flight
 
-| Block (s) | Coherence | Null 95th pct. | p-value |
+- Segments: 445; permutations: 2000; coherence 0.0058.
+- Null that shuffles segment pairings: p = 0.0020. This null is too lenient here, because the power of both signals rises together inside the aurora.
+- Null that keeps the pairing and randomizes one phase per segment: p = 0.065 (null mean 0.0039).
+- The estimate is carried by few segments: effective number 28 of 445.
+
+### 4.2 Equal-weight coherency per block
+
+Each segment's cross-spectrum is divided by its own power, so every segment weighs the same. Real part: in-phase coupling. Imaginary part: quadrature (90 degrees). With this sign convention, E proportional to +d(density)/dt gives a negative imaginary part. p-values are two-sided, from shuffled pairings within the block.
+
+- Blocks of 30 segments: 4 of 14 have significant quadrature after Bonferroni (p < 0.0036); 0 have a significant in-phase part.
+- Sign-correction check inside the significant blocks: without the correction, segments after a positive spike give +0.18 and segments after a negative spike give -0.24 (quadrature, sign-aligned per block).
+
+| Block (s) | In phase | Quadrature | z (quadrature) | p (quadrature) |
+|---|---|---|---|---|
+| 269 to 317 | +0.026 | +0.013 | +0.4 | 0.7096 |
+| 317 to 372 | -0.004 | +0.088 | +2.4 | 0.0170 |
+| 372 to 399 | +0.001 | +0.023 | +0.7 | 0.5067 |
+| 399 to 427 | +0.014 | +0.010 | +0.3 | 0.7696 |
+| 427 to 457 | +0.020 | +0.025 | +0.7 | 0.5012 |
+| 462 to 490 | +0.003 | +0.014 | +0.4 | 0.7141 |
+| 491 to 537 | +0.008 | +0.148 | +3.7 | 0.0005 * |
+| 538 to 581 | -0.111 | +0.142 | +3.1 | 0.0025 * |
+| 581 to 647 | +0.057 | -0.029 | -0.7 | 0.4793 |
+| 647 to 756 | -0.062 | -0.121 | -2.9 | 0.0065 |
+| 756 to 784 | +0.028 | -0.294 | -6.5 | 0.0005 * |
+| 785 to 820 | +0.035 | -0.256 | -6.3 | 0.0005 * |
+| 821 to 849 | +0.078 | -0.110 | -2.6 | 0.0150 |
+| 849 to 877 | +0.030 | +0.021 | +0.6 | 0.5632 |
+
+## 5. Exploratory: coupling and signal strength
+
+Per block, size of the quadrature coupling (absolute value) against signal strength:
+
+- vs E-field power in 10-40 Hz: Spearman rho = 0.83, p = 0.0003.
+- vs density signal-to-noise (power 10-40 Hz / 60-75 Hz): rho = 0.76, p = 0.002.
+
+| Block (s) | Quadrature | Density signal-to-noise | E-field power (rel.) |
 |---|---|---|---|
-| 269 to 317 | 0.016 | 0.050 | 0.9860 |
-| 317 to 372 | 0.039 | 0.055 | 0.2789 |
-| 372 to 399 | 0.029 | 0.048 | 0.6812 |
-| 399 to 427 | 0.040 | 0.054 | 0.2649 |
-| 427 to 457 | 0.098 | 0.072 | 0.0070 |
-| 462 to 490 | 0.009 | 0.081 | 0.9175 |
-| 491 to 537 | 0.082 | 0.052 | 0.0005 * |
-| 538 to 581 | 0.056 | 0.068 | 0.0965 |
-| 581 to 647 | 0.062 | 0.075 | 0.1004 |
-| 647 to 756 | 0.122 | 0.059 | 0.0005 * |
-| 756 to 784 | 0.098 | 0.049 | 0.0005 * |
-| 785 to 820 | 0.098 | 0.051 | 0.0005 * |
-| 821 to 849 | 0.038 | 0.056 | 0.3133 |
-| 849 to 877 | 0.029 | 0.052 | 0.6327 |
+| 269 to 317 | +0.013 | 1.0 | 6 |
+| 317 to 372 | +0.088 | 1.0 | 10 |
+| 372 to 399 | +0.023 | 1.0 | 1 |
+| 399 to 427 | +0.010 | 1.0 | 4 |
+| 427 to 457 | +0.025 | 1.3 | 98 |
+| 462 to 490 | +0.014 | 1.0 | 60 |
+| 491 to 537 | +0.148 | 1.3 | 798 |
+| 538 to 581 | +0.142 | 5.1 | 293 |
+| 581 to 647 | -0.029 | 5.4 | 161 |
+| 647 to 756 | -0.121 | 4.3 | 1064 |
+| 756 to 784 | -0.294 | 11.2 | 1063 |
+| 785 to 820 | -0.256 | 8.9 | 404 |
+| 821 to 849 | -0.110 | 4.5 | 89 |
+| 849 to 877 | +0.021 | 1.1 | 53 |
 
-## 5. Exploratory: coherence and signal strength
-
-The significant blocks sit where the rocket appears to be inside the aurora. Per block:
-
-- Coherence vs E-field power in 10-40 Hz: Spearman rho = 0.78, p = 0.001.
-- Coherence vs density signal-to-noise (power 10-40 Hz / 60-75 Hz): rho = 0.58, p = 0.030.
-
-| Block (s) | Coherence | Density signal-to-noise | E-field power (counts², rel.) |
-|---|---|---|---|
-| 269 to 317 | 0.016 | 1.0 | 6 |
-| 317 to 372 | 0.039 | 1.0 | 10 |
-| 372 to 399 | 0.029 | 1.0 | 1 |
-| 399 to 427 | 0.040 | 1.0 | 4 |
-| 427 to 457 | 0.098 | 1.3 | 98 |
-| 462 to 490 | 0.009 | 1.0 | 60 |
-| 491 to 537 | 0.082 | 1.3 | 798 |
-| 538 to 581 | 0.056 | 5.1 | 293 |
-| 581 to 647 | 0.062 | 5.4 | 161 |
-| 647 to 756 | 0.122 | 4.3 | 1064 |
-| 756 to 784 | 0.098 | 11.2 | 1063 |
-| 785 to 820 | 0.098 | 8.9 | 404 |
-| 821 to 849 | 0.038 | 4.5 | 89 |
-| 849 to 877 | 0.029 | 1.1 | 53 |
-
-Two readings fit this pattern: the coupling is physically stronger inside the aurora, or it is only detectable when both signals are strong (a density signal-to-noise near 1 means the density is pure noise in that band). These data cannot separate them; a cleaner density trace or an independent auroral marker (particle data) could. With 14 blocks and no pre-registered hypothesis, treat this as exploratory.
+Two readings fit this pattern: the coupling is physically stronger where wave activity is strong, or it is only detectable when the density is above its noise floor (a signal-to-noise near 1 means pure noise in that band). These data cannot separate them. With 14 blocks and no hypothesis fixed in advance, treat this as exploratory.

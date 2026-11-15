@@ -21,7 +21,7 @@ def hann_periodogram(
     """One-sided Hann-windowed periodogram (unnormalized power, enough for slopes).
 
     `detrend` removes a straight line first, so the mean and slow drifts (for example the
-    rocket spin in the E field) do not leak into the fit band.
+    ~1.84 s oscillation in the E field, likely the rocket spin) do not leak into the fit band.
     """
     x = _detrend(x, type="linear") if detrend else np.asarray(x, dtype=float)
     w = np.hanning(len(x))

@@ -34,8 +34,9 @@ def segment_spectra(
 
     The E field (2500 Hz) is low-pass filtered (zero phase) below the density Nyquist
     (~76 Hz) and interpolated onto the density timestamps. With `sign_correct`, each E
-    segment is multiplied by the polarity of the preceding spike: the probe pair flips
-    orientation every half spin, which would otherwise cancel the cross-spectrum.
+    segment is multiplied by the polarity of the preceding spike. The spikes alternate in sign,
+    which suggests the sensor flips orientation every half spin; without the flip the
+    cross-spectrum cancels. The instrument geometry is inferred from the signal.
     """
     sos = butter(6, lowpass_hz, fs=efield.fs, output="sos")
     e_smooth = sosfiltfilt(sos, efield.x - np.median(efield.x))
@@ -75,10 +76,12 @@ def band_coherence(X: np.ndarray, Y: np.ndarray, band_mask: np.ndarray) -> float
 def permutation_test(
     X: np.ndarray, Y: np.ndarray, band_mask: np.ndarray, n_perm: int, rng: np.random.Generator
 ) -> tuple[float, float, np.ndarray]:
-    """Observed band coherence and its permutation p-value.
+    """Observed band coherence and its p-value under shuffled segment pairings.
 
-    The null pairs each density segment with a random E segment from the same set, which
-    keeps both spectra intact but breaks any real time alignment.
+    Caveat: this null is too lenient when the power of both signals rises and falls together
+    (here, inside the aurora). Coherence weights segments by power, so "strong with strong"
+    pairs inflate the observed value even with no phase relation, and shuffling removes that.
+    Kept for comparison; use `phase_randomization_test` or `quadrature_test` instead.
     """
     observed = band_coherence(X, Y, band_mask)
     null = np.array(
@@ -86,3 +89,78 @@ def permutation_test(
     )
     p_value = (1 + np.sum(null >= observed)) / (1 + n_perm)
     return observed, float(p_value), null
+
+
+def phase_randomization_test(
+    X: np.ndarray, Y: np.ndarray, band_mask: np.ndarray, n_perm: int, rng: np.random.Generator
+) -> tuple[float, float, np.ndarray]:
+    """Band coherence tested against a null that keeps the pairing and the power of every
+    segment, and only rotates each E segment by one random phase.
+
+    Power co-variation is therefore the same in the null and in the data; only a phase
+    relation that repeats from segment to segment can make the observed value stand out.
+    """
+    observed = band_coherence(X, Y, band_mask)
+    null = np.empty(n_perm)
+    for k in range(n_perm):
+        rotation = np.exp(2j * np.pi * rng.random((len(Y), 1)))
+        null[k] = band_coherence(X, Y * rotation, band_mask)
+    p_value = (1 + np.sum(null >= observed)) / (1 + n_perm)
+    return observed, float(p_value), null
+
+
+def effective_segments(X: np.ndarray, Y: np.ndarray, band_mask: np.ndarray) -> float:
+    """How many segments effectively carry the power-weighted coherence estimate.
+
+    Equals the number of segments when all have the same power, and approaches 1 when a
+    single segment dominates.
+    """
+    w = (np.abs(X[:, band_mask]) ** 2).mean(axis=1) * (np.abs(Y[:, band_mask]) ** 2).mean(axis=1)
+    return float(w.sum() ** 2 / (w**2).sum())
+
+
+def segment_coherency(X: np.ndarray, Y: np.ndarray, band_mask: np.ndarray) -> np.ndarray:
+    """One complex number per segment: its band cross-spectrum divided by its own power.
+
+    Every segment weighs the same, whatever its power. The real part measures in-phase
+    coupling, the imaginary part coupling with a 90 degree phase shift (quadrature). With
+    this sign convention (X times conj(Y)), a positive imaginary part means X leads Y.
+    """
+    cross = (X * np.conj(Y))[:, band_mask].sum(axis=1)
+    px = (np.abs(X[:, band_mask]) ** 2).sum(axis=1)
+    py = (np.abs(Y[:, band_mask]) ** 2).sum(axis=1)
+    return cross / np.sqrt(px * py)
+
+
+@dataclass(frozen=True)
+class CoherencyTest:
+    mean: complex  # mean per-segment coherency
+    null_sd_real: float  # spread of the mean under shuffled pairings
+    null_sd_imag: float
+    p_real: float  # two-sided
+    p_imag: float
+
+
+def coherency_test(
+    X: np.ndarray, Y: np.ndarray, band_mask: np.ndarray, n_perm: int, rng: np.random.Generator
+) -> CoherencyTest:
+    """Mean per-segment coherency, tested by shuffling the segment pairings.
+
+    Because each pair is normalized by its own power, the power co-variation that breaks
+    `permutation_test` does not affect this one. Shuffling also keeps any waveform that is
+    locked to the segment start in both signals, so such an artifact would not look
+    significant here.
+    """
+    observed = segment_coherency(X, Y, band_mask).mean()
+    null = np.array(
+        [segment_coherency(X, Y[rng.permutation(len(Y))], band_mask).mean() for _ in range(n_perm)]
+    )
+    p_real = (1 + np.sum(np.abs(null.real) >= abs(observed.real))) / (1 + n_perm)
+    p_imag = (1 + np.sum(np.abs(null.imag) >= abs(observed.imag))) / (1 + n_perm)
+    return CoherencyTest(
+        mean=complex(observed),
+        null_sd_real=float(null.real.std()),
+        null_sd_imag=float(null.imag.std()),
+        p_real=float(p_real),
+        p_imag=float(p_imag),
+    )
